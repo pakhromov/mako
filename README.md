@@ -1,5 +1,7 @@
 # mako
 
+Maintained fork of mako with added ignore-replace option to ignore applications requests to replace their notifications (usefull for apps like Discord which only show the latest message by replacing the previous ones)
+
 A lightweight notification daemon for Wayland. Works on Sway.
 
 <p align="center">
