@@ -56,7 +56,7 @@ Removed options are a hard parse error, so they must be deleted from an existing
 
 `makoctl` no longer starts mako. When nothing is running there is nothing to act on, so it exits silently with status 0 instead of activating a daemon.
 
-### Running
+## Running
 
 `mako` will run automatically when a notification is emitted. This happens via D-Bus activation, and it is the only supported way to start it: mako shuts itself down once no notification is left on screen, so starting it by hand or from a service manager just gives you a process that exits a second later. You should remove mako from your compositor autostart options when using this fork. If mako is not starting on the first emitted notification, try running:
 
@@ -76,6 +76,14 @@ Or create ~/.local/share/dbus-1/services/mako.service by hand:
 [D-BUS Service]
 Name=org.freedesktop.Notifications
 Exec=/absolute/path/to/mako
+```
+
+## Installation
+
+Install [`mako-daemonless`][aur] from the AUR:
+
+```shell
+yay -S mako-daemonless
 ```
 
 ## Configuration
@@ -118,5 +126,6 @@ MIT
 
 [irc]: https://web.libera.chat/gamja/#emersion
 [upstream]: https://github.com/emersion/mako
+[aur]: https://aur.archlinux.org/packages/mako-daemonless
 [spec]: https://specifications.freedesktop.org/notification-spec/latest/
 [basu]: https://github.com/emersion/basu
