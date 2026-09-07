@@ -10,7 +10,6 @@
 #include "mako.h"
 #include "config.h"
 #include "criteria.h"
-#include "mode.h"
 #include "notification.h"
 #include "surface.h"
 #include "wayland.h"
@@ -40,7 +39,6 @@ void destroy_criteria(struct mako_criteria *criteria) {
 	regfree(&criteria->body_pattern);
 	free(criteria->raw_string);
 	free(criteria->output);
-	free(criteria->mode);
 	free(criteria);
 }
 
@@ -149,10 +147,6 @@ bool match_criteria(struct mako_criteria *criteria,
 	if (spec.output && (notif->surface == NULL ||
 				notif->surface->surface_output == NULL ||
 				strcmp(criteria->output, notif->surface->surface_output->name) != 0)) {
-		return false;
-	}
-
-	if (spec.mode && !has_mode(notif->state, criteria->mode)) {
 		return false;
 	}
 
@@ -355,10 +349,6 @@ bool apply_criteria_field(struct mako_criteria *criteria, char *token) {
 		} else if (strcmp(key, "output") == 0) {
 			criteria->output = strdup(value);
 			criteria->spec.output = true;
-			return true;
-		} else if (strcmp(key, "mode") == 0) {
-			criteria->mode = strdup(value);
-			criteria->spec.mode = true;
 			return true;
 		} else {
 			// Anything left must be one of the boolean fields, defined using

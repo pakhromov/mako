@@ -85,19 +85,16 @@ struct mako_notification *create_notification(struct mako_state *state);
 void destroy_notification(struct mako_notification *notif);
 
 void close_notification(struct mako_notification *notif,
-	enum mako_notification_close_reason reason,
-	bool add_to_history);
+	enum mako_notification_close_reason reason);
 void close_group_notifications(struct mako_notification *notif,
-	enum mako_notification_close_reason reason, bool add_to_history);
+	enum mako_notification_close_reason reason);
 void close_all_notifications(struct mako_state *state,
-	enum mako_notification_close_reason reason, bool add_to_history);
+	enum mako_notification_close_reason reason);
 char *format_hidden_text(char variable, bool *markup, void *data);
 char *format_notif_text(char variable, bool *markup, void *data);
 size_t format_text(const char *format, char *buf, mako_format_func_t func, void *data);
 struct mako_notification *get_notification(struct mako_state *state, uint32_t id);
 struct mako_notification *get_tagged_notification(struct mako_state *state, const char *tag, const char *app_name);
-size_t format_notification(struct mako_notification *notif, const char *format,
-	char *buf);
 void notification_handle_button(struct mako_notification *notif, uint32_t button,
 	enum wl_pointer_button_state state, const struct mako_binding_context *ctx);
 void notification_handle_touch(struct mako_notification *notif,

@@ -59,6 +59,7 @@ bool init_event_loop(struct mako_event_loop *loop, sd_bus *bus,
 
 	loop->bus = bus;
 	loop->display = display;
+	loop->running = true;
 	wl_list_init(&loop->timers);
 
 	return true;
@@ -180,8 +181,6 @@ static void handle_event_loop_timer(struct mako_event_loop *loop) {
 }
 
 int run_event_loop(struct mako_event_loop *loop) {
-	loop->running = true;
-
 	int ret = 0;
 
 	// Unprocessed messages can be queued up by synchronous sd_bus methods. We

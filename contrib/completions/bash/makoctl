@@ -7,13 +7,9 @@ _makoctl()
 
   cmds=(
     'dismiss'
-    'restore'
     'invoke'
     'menu'
     'list'
-    'history'
-    'reload'
-    'mode'
     'help'
     '-h'
     '--help'
@@ -26,7 +22,7 @@ _makoctl()
 
   case $prev in
     dismiss)
-      COMPREPLY=($(compgen -W "-a --all -g --group -h --no-history -n" -- "$cur"))
+      COMPREPLY=($(compgen -W "-a --all -g --group -n" -- "$cur"))
       return
       ;;
     invoke)
@@ -35,10 +31,6 @@ _makoctl()
       ;;
     menu)
       COMPREPLY=($(compgen -c -W "-n" -- "$cur"))
-      return
-      ;;
-    mode)
-      COMPREPLY=($(compgen -W "-a -r -t -s" -- "$cur"))
       return
       ;;
   esac

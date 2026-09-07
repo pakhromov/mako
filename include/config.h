@@ -10,7 +10,6 @@
 enum mako_binding_action {
 	MAKO_BINDING_NONE,
 	MAKO_BINDING_DISMISS,
-	MAKO_BINDING_DISMISS_NO_HISTORY,
 	MAKO_BINDING_DISMISS_GROUP,
 	MAKO_BINDING_DISMISS_ALL,
 	MAKO_BINDING_INVOKE_ACTION,
@@ -41,7 +40,7 @@ enum mako_icon_location {
 struct mako_style_spec {
 	bool width, height, outer_margin, margin, padding, border_size, border_radius, font,
 		markup, format, text_alignment, actions, default_timeout, ignore_timeout, ignore_replace, ignore_close,
-		icons, max_icon_size, icon_path, icon_border_radius, group_criteria_spec, invisible, history,
+		icons, max_icon_size, icon_path, icon_border_radius, group_criteria_spec,
 		icon_location, max_visible, layer, output, anchor;
 	struct {
 		bool background, text, border, progress;
@@ -89,8 +88,6 @@ struct mako_style {
 
 	struct mako_criteria_spec group_criteria_spec;
 
-	bool invisible; // Skipped during render, doesn't count toward max_visible
-	bool history;
 	enum mako_icon_location icon_location;
 
 	int32_t max_visible;
@@ -109,7 +106,6 @@ struct mako_config {
 
 	uint32_t sort_criteria; //enum mako_sort_criteria
 	uint32_t sort_asc;
-	int32_t max_history;
 
 	struct mako_style superstyle;
 };
@@ -128,7 +124,7 @@ bool apply_superset_style(
 
 int parse_config_arguments(struct mako_config *config, int argc, char **argv);
 int load_config_file(struct mako_config *config, char *config_arg);
-int reload_config(struct mako_config *config, int argc, char **argv);
+int load_config(struct mako_config *config, int argc, char **argv);
 bool apply_global_option(struct mako_config *config, const char *name,
 	const char *value);
 

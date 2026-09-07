@@ -21,26 +21,15 @@ void init_default_config(struct mako_config *config) {
 	init_default_style(&new_criteria->style);
 	new_criteria->raw_string = strdup("(root)");
 
-	// Hide grouped notifications by default, and put the group count in
-	// their format...
+	// Put the group count in the format of grouped notifications. Only the
+	// first of a group is ever drawn; see render.c.
 	new_criteria = create_criteria(config);
 	init_empty_style(&new_criteria->style);
 	new_criteria->grouped = true;
 	new_criteria->spec.grouped = true;
-	new_criteria->style.invisible = true;
-	new_criteria->style.spec.invisible = true;
 	new_criteria->style.format = strdup("(%g) <b>%s</b>\n%b");
 	new_criteria->style.spec.format = true;
 	new_criteria->raw_string = strdup("(default grouped)");
-
-	// ...but make the first one in the group visible.
-	new_criteria = create_criteria(config);
-	init_empty_style(&new_criteria->style);
-	new_criteria->group_index = 0;
-	new_criteria->spec.group_index = true;
-	new_criteria->style.invisible = false;
-	new_criteria->style.spec.invisible = true;
-	new_criteria->raw_string = strdup("(default group-index=0)");
 
 	// Define the default format for the hidden placeholder notification.
 	new_criteria = create_criteria(config);
@@ -53,7 +42,6 @@ void init_default_config(struct mako_config *config) {
 
 	init_empty_style(&config->superstyle);
 
-	config->max_history = 5;
 	config->sort_criteria = MAKO_SORT_CRITERIA_TIME;
 	config->sort_asc = 0;
 }
@@ -120,8 +108,6 @@ void init_default_style(struct mako_style *style) {
 	style->colors.progress.operator = CAIRO_OPERATOR_OVER;
 
 	style->group_criteria_spec.none = true;
-	style->invisible = false;
-	style->history = true;
 	style->icon_location = MAKO_ICON_LOCATION_LEFT;
 
 	style->output = strdup("");
@@ -348,16 +334,6 @@ bool apply_style(struct mako_style *target, const struct mako_style *style) {
 		target->spec.group_criteria_spec = true;
 	}
 
-	if (style->spec.invisible) {
-		target->invisible = style->invisible;
-		target->spec.invisible = true;
-	}
-
-	if (style->spec.history) {
-		target->history = style->history;
-		target->spec.history = true;
-	}
-
 	if (style->spec.icon_location) {
 		target->icon_location = style->icon_location;
 		target->spec.icon_location = true;
@@ -435,7 +411,6 @@ bool apply_superset_style(
 	target->spec.default_timeout = true;
 	target->spec.markup = true;
 	target->spec.actions = true;
-	target->spec.history = true;
 	target->spec.format = true;
 
 	free(target->format);
@@ -483,7 +458,6 @@ bool apply_superset_style(
 
 		target->markup |= style->markup;
 		target->actions |= style->actions;
-		target->history |= style->history;
 
 		// We do need to be safe about this one though.
 		if (style->spec.format) {
@@ -552,8 +526,6 @@ static bool apply_config_option(struct mako_config *config, const char *name,
 			return false;
 		}
 		return true;
-	} else if (strcmp(name, "max-history") == 0) {
-		return parse_int(value, &config->max_history);
 	} else if (strcmp(name, "include") == 0) {
 		char *path = expand_config_path(value);
 		return path && load_config_file(config, path) == 0;
@@ -663,10 +635,6 @@ static bool apply_style_option(struct mako_style *style, const char *name,
 	} else if (strcmp(name, "group-by") == 0) {
 		return spec->group_criteria_spec =
 			parse_criteria_spec(value, &style->group_criteria_spec);
-	} else if (strcmp(name, "invisible") == 0) {
-		return spec->invisible = parse_boolean(value, &style->invisible);
-	} else if (strcmp(name, "history") == 0) {
-		return spec->history = parse_boolean(value, &style->history);
 	} else if (strcmp(name, "border-radius") == 0) {
 		spec->border_radius = parse_directional(value, &style->border_radius);
 		if (spec->border_radius && spec->padding) {
@@ -703,8 +671,6 @@ static bool apply_style_option(struct mako_style *style, const char *name,
 			binding.action = MAKO_BINDING_NONE;
 		} else if (strcmp(value, "dismiss") == 0) {
 			binding.action = MAKO_BINDING_DISMISS;
-		} else if (strcmp(value, "dismiss --no-history") == 0) {
-			binding.action = MAKO_BINDING_DISMISS_NO_HISTORY;
 		} else if (strcmp(value, "dismiss-all") == 0) {
 			binding.action = MAKO_BINDING_DISMISS_ALL;
 		} else if (strcmp(value, "dismiss-group") == 0) {
@@ -935,8 +901,6 @@ int parse_config_arguments(struct mako_config *config, int argc, char **argv) {
 		{"actions", required_argument, 0, 0},
 		{"format", required_argument, 0, 0},
 		{"max-visible", required_argument, 0, 0},
-		{"max-history", required_argument, 0, 0},
-		{"history", required_argument, 0, 0},
 		{"default-timeout", required_argument, 0, 0},
 		{"ignore-timeout", required_argument, 0, 0},
 		{"ignore-replace", required_argument, 0, 0},
@@ -1010,7 +974,7 @@ int parse_config_arguments(struct mako_config *config, int argc, char **argv) {
 
 // Returns zero on success, negative on error, positive if we should exit
 // immediately due to something the user asked for (like help).
-int reload_config(struct mako_config *config, int argc, char **argv) {
+int load_config(struct mako_config *config, int argc, char **argv) {
 	struct mako_config new_config = {0};
 	init_default_config(&new_config);
 

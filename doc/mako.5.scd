@@ -16,13 +16,6 @@ Empty lines and lines that begin with # are ignored.
 
 # GLOBAL CONFIGURATION OPTIONS
 
-*max-history*=_n_
-	Set maximum number of expired notifications to keep in the history
-	buffer to _n_. If the buffer is full, newly expired notifications
-	replace the oldest ones. If 0, history is disabled.
-
-	Default: 5
-
 *sort*=_+/-time_ | _+/-priority_
 	Sorts incoming notifications by time and/or priority in ascending(+)
 	or descending(-) order.
@@ -71,9 +64,8 @@ Supported actions:
 *none*
 	Do nothing.
 
-*dismiss [--no-history]*
-	Dismiss the current notification. If *--no-history* is passed, the notification
-	won't be added to history.
+*dismiss*
+	Dismiss the current notification.
 
 *dismiss-all*
 	Dismiss all notifications.
@@ -242,13 +234,6 @@ Supported actions:
 
 	Default: 1
 
-*history*=0|1
-	If set, mako will save notifications that have reached their timeout
-	into the history buffer instead of immediately deleting them.
-	_max-history_ determines the size of the history buffer.
-
-	Default: 1
-
 *format*=_format_
 	Set notification format string to _format_. See *FORMAT SPECIFIERS* for
 	more information. To change this for grouped notifications, set it within
@@ -361,9 +346,6 @@ The following fields are available in criteria:
 - _desktop-entry_ (string)
 - _actionable_ (boolean)
 - _expiring_ (boolean)
-- _mode_ (string): only apply style options in this section if the provided
-  mode is currently enabled. For more information about modes, see the _MODES_
-  section.
 
 The following fields are also available to match on a second pass based on
 where previous style options decided to place each notification:
@@ -402,9 +384,12 @@ as bare words:
 There are three criteria always present at the front of the list:
 - An empty criteria which matches all notifications and contains the defaults
   for all style options, overwritten with any configured in the global section.
-- \[grouped\], which sets the default *format* for grouped notifications and
-  sets them *invisible*.
-- \[group-index=0\], which makes the first member of each group visible again.
+- \[grouped\], which sets the default *format* for grouped notifications.
+- \[hidden\], which sets the default *format* for the placeholder shown when
+  more notifications are present than *max-visible* allows.
+
+Only the first notification of a group is ever drawn; the rest are represented
+by the *%g* count in its format.
 
 These options can be overridden by simply defining the criteria yourself and
 overriding them.
@@ -414,19 +399,6 @@ being matched by a given criteria. Criteria matching _grouped_ or _group-index_
 are not allowed to change the _anchor_, _output_, or _group-by_, as this would
 invalidate the grouping. Grouping is only performed once rather than
 recursively, to avoid the potential for infinite loops.
-
-# CRITERIA-ONLY STYLE OPTIONS
-
-Some style options are not useful in the global context and therefore have no
-associated command-line option.
-
-*invisible*=0|1
-	Whether this notification should be invisible even if it is above the
-	_max-visible_ cutoff. This is used primarily for hiding members of groups.
-	If you want to make more than the first group member visible, turn this
-	option off within a _group-index_ criteria.
-
-	Default: 0
 
 # COLORS
 
@@ -478,26 +450,6 @@ specifiers.
 *%h*	Number of hidden notifications
 
 *%t*	Total number of notifications
-
-# MODES
-
-mako supports applying style options conditionally via modes. A configuration
-section with a _mode_ criteria will only be applied if the current mode
-matches. **makoctl**(1) can be used to change the current mode.
-
-The initial list of modes contains a single mode called "default". This is
-deprecated, in a future version the initial list of modes will be empty.
-
-For example, to hide all notifications if the mode "do-not-disturb" is
-enabled:
-
-```
-[mode=do-not-disturb]
-invisible=1
-```
-
-_makoctl mode -a do-not-disturb_ will hide all notifications,
-_makoctl mode -r do-not-disturb_ will show them again.
 
 # AUTHORS
 

@@ -6,6 +6,14 @@
 
 static const char service_name[] = "org.freedesktop.Notifications";
 
+int request_service_name(struct mako_state *state) {
+	return sd_bus_request_name(state->bus, service_name, 0);
+}
+
+int release_service_name(struct mako_state *state) {
+	return sd_bus_release_name(state->bus, service_name);
+}
+
 bool init_dbus(struct mako_state *state) {
 	int ret = 0;
 	state->bus = NULL;
@@ -29,7 +37,7 @@ bool init_dbus(struct mako_state *state) {
 		goto error;
 	}
 
-	ret = sd_bus_request_name(state->bus, service_name, 0);
+	ret = request_service_name(state);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to acquire service name: %s\n", strerror(-ret));
 		if (ret == -EEXIST) {

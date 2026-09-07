@@ -10,10 +10,12 @@ _mako()
     '-h'
     '--config'
     '-c'
+    '--font'
     '--background-color'
     '--text-color'
     '--width'
     '--height'
+    '--outer-margin'
     '--margin'
     '--padding'
     '--border-size'
@@ -21,22 +23,27 @@ _mako()
     '--border-radius'
     '--progress-color'
     '--icons'
+    '--icon-location'
     '--icon-path'
     '--max-icon-size'
     '--icon-border-radius'
     '--markup'
     '--actions'
     '--format'
-    '--hidden-format'
     '--max-visible'
-    '--max-history'
-    '--history'
     '--sort'
+    '--group-by'
     '--default-timeout'
     '--ignore-timeout'
+    '--ignore-replace'
+    '--ignore-close'
     '--output'
     '--layer'
     '--anchor'
+    '--on-button-left'
+    '--on-button-middle'
+    '--on-button-right'
+    '--on-touch'
   )
 
   case $prev in
@@ -44,7 +51,7 @@ _mako()
       COMPREPLY=($(compgen -f -- "$cur"))
       return
       ;;
-    --icons|--markup|--actions|--history|--ignore-timeout)
+    --icons|--markup|--actions|--ignore-timeout|--ignore-replace|--ignore-close)
       COMPREPLY=($(compgen -W "0 1" -- "$cur"))
       return
       ;;
@@ -53,6 +60,14 @@ _mako()
       outputs="$(swaymsg -t get_outputs 2>/dev/null | \
               jq -r '.[] | select(.active) | "\(.name)\t\(.make) \(.model)"' 2>/dev/null)"
       COMPREPLY=($(compgen -W "$outputs" -- "$cur"))
+      return
+      ;;
+    --icon-location)
+      COMPREPLY=($(compgen -W "left right top bottom" -- "$cur"))
+      return
+      ;;
+    --on-button-left|--on-button-middle|--on-button-right|--on-touch)
+      COMPREPLY=($(compgen -W "none dismiss dismiss-all dismiss-group invoke-default-action invoke-action exec" -- "$cur"))
       return
       ;;
     --layer)

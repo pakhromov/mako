@@ -12,7 +12,11 @@ mako - notification daemon for Wayland
 
 mako is a graphical notification daemon for Wayland compositors which support
 the layer-shell protocol. Notifications received over D-Bus are displayed until
-dismissed with a click or via *makoctl*(1).
+dismissed with a click or via *makoctl*(1). This fork of mako works without a
+persistent background daemon. It is started on demand using D-Bus activation
+when any notification arrives, and exits when there are no notifications on the
+screen. Notifications are not kept anywhere once they are dismissed, expired,
+or acted upon.
 
 # OPTIONS
 

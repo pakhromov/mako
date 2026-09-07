@@ -4,8 +4,8 @@
 
 #include "config.h"
 #include "dbus.h"
+#include "idle.h"
 #include "mako.h"
-#include "mode.h"
 #include "notification.h"
 #include "render.h"
 #include "surface.h"
@@ -37,6 +37,8 @@ static const char usage[] =
 	"                                      meaning as in CSS.\n"
 	"      --progress-color <color>        Progress indicator color.\n"
 	"      --icons <0|1>                   Show icons in notifications.\n"
+	"      --icon-location <position>      Position of the icon relative to the\n"
+	"                                      text.\n"
 	"      --icon-path <path>[:<path>...]  Icon search path, colon delimited.\n"
 	"      --max-icon-size <px>            Set max size of icons.\n"
 	"      --icon-border-radius <px>       Icon's corner radius.\n"
@@ -44,18 +46,24 @@ static const char usage[] =
 	"      --actions <0|1>                 Enable/disable application action\n"
 	"                                      execution.\n"
 	"      --format <format>               Format string.\n"
-	"      --hidden-format <format>        Format string.\n"
 	"      --max-visible <n>               Max number of visible notifications.\n"
-	"      --max-history <n>               Max size of history buffer.\n"
-	"      --history <0|1>                 Add expired notifications to history.\n"
 	"      --sort <sort_criteria>          Sorts incoming notifications by time\n"
 	"                                      and/or priority in ascending(+) or\n"
 	"                                      descending(-) order.\n"
+	"      --group-by <field>[,...]        Group notifications sharing these\n"
+	"                                      criteria fields.\n"
 	"      --default-timeout <timeout>     Default timeout in milliseconds.\n"
 	"      --ignore-timeout <0|1>          Enable/disable notification timeout.\n"
+	"      --ignore-replace <0|1>          Ignore requests to replace a\n"
+	"                                      notification.\n"
+	"      --ignore-close <0|1>            Ignore requests to close a notification.\n"
 	"      --output <name>                 Show notifications on this output.\n"
 	"      --layer <layer>                 Arrange notifications at this layer.\n"
 	"      --anchor <position>             Position on output to put notifications.\n"
+	"      --on-button-left <action>       Action on left pointer button.\n"
+	"      --on-button-middle <action>     Action on middle pointer button.\n"
+	"      --on-button-right <action>      Action on right pointer button.\n"
+	"      --on-touch <action>             Action on touch.\n"
 	"\n"
 	"Colors can be specified with the format #RRGGBB or #RRGGBBAA.\n";
 
@@ -73,25 +81,12 @@ static bool init(struct mako_state *state) {
 		return false;
 	}
 	wl_list_init(&state->notifications);
-	wl_list_init(&state->history);
-	wl_array_init(&state->current_modes);
-	const char *mode = "default";
-	set_modes(state, &mode, 1);
 	return true;
 }
 
 static void finish(struct mako_state *state) {
-	char **mode_ptr;
-	wl_array_for_each(mode_ptr, &state->current_modes) {
-		free(*mode_ptr);
-	}
-	wl_array_release(&state->current_modes);
-
 	struct mako_notification *notif, *tmp;
 	wl_list_for_each_safe(notif, tmp, &state->notifications, link) {
-		destroy_notification(notif);
-	}
-	wl_list_for_each_safe(notif, tmp, &state->history, link) {
 		destroy_notification(notif);
 	}
 
@@ -104,19 +99,13 @@ static void finish(struct mako_state *state) {
 	finish_dbus(state);
 }
 
-static struct mako_event_loop *event_loop = NULL;
-
 int main(int argc, char *argv[]) {
 	struct mako_state state = {0};
 
-	state.argc = argc;
-	state.argv = argv;
-
 	wl_list_init(&state.surfaces);
 
-	// This is a bit wasteful, but easier than special-casing the reload.
 	init_default_config(&state.config);
-	int ret = reload_config(&state.config, argc, argv);
+	int ret = load_config(&state.config, argc, argv);
 
 	if (ret < 0) {
 		finish_config(&state.config);
@@ -132,7 +121,9 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	event_loop = &state.event_loop;
+	// Nothing to show yet: start the clock, so that a process nobody ends up
+	// talking to doesn't stay around.
+	update_idle_timer(&state);
 
 	ret = run_event_loop(&state.event_loop);
 

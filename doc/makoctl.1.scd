@@ -2,7 +2,7 @@ makoctl(1)
 
 # NAME
 
-makoctl - controls the *mako*(1) daemon
+makoctl - control *mako*(1)
 
 # SYNOPSIS
 
@@ -10,7 +10,10 @@ makoctl [cmd] [options...]
 
 # DESCRIPTION
 
-Sends IPC commands to the running mako daemon via dbus.
+Sends IPC commands to the running mako instance via dbus.
+
+This fork of mako only runs when there are active notifications on screen.
+When there is nothing to act on, makoctl exits silently with status 0.
 
 # COMMANDS
 
@@ -25,15 +28,9 @@ Sends IPC commands to the running mako daemon via dbus.
 	*-g, --group*
 		Dismiss the first notification group.
 
-	*-h, --no-history*
-		Dismiss the current notification without adding it to history.
-
 	*-n* <id>
 		Dismiss the notification with the given id. Defaults to the first
 		notification.
-
-*restore*
-	Restores the most recently expired notification from the history buffer.
 
 *invoke* [-n <id>] [action]
 	Invokes an action on a notification. If _action_ is not specified, invokes
@@ -74,33 +71,6 @@ Sends IPC commands to the running mako daemon via dbus.
 
 	*-j*
 		Use JSON output.
-
-*history*
-	Retrieve a list of dismissed notifications.
-
-	Options:
-
-	*-j*
-		Use JSON output.
-
-*reload*
-	Reloads the configuration file.
-
-*mode* ++
-*mode* -s <mode>... ++
-*mode* [-a mode]... [-r mode]... [-t mode]... +++
-	When run without any option, retrieves a list of current modes.
-
-	When run with the _-s_ option, replaces the current modes with the provided
-	list.
-
-	When run with the _-a_ or _-r_ options, adds or removes the provided mode
-	from the current modes.
-
-	When run with the _-t_ option, toggle the mode by removing it when present
-	and otherwise adding it.
-
-	See the _MODES_ section in **mako**(5) for more information about modes.
 
 *help, -h, --help*
 	Show help message and quit.

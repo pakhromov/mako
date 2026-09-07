@@ -395,7 +395,9 @@ void render(struct mako_surface *surface, struct pool_buffer *buffer, int scale,
 			continue;
 		}
 
-		if (style->invisible) {
+		// Only the first notification of a group is drawn; the others are
+		// folded into it via the %g count in its format.
+		if (notif->group_index > 0) {
 			continue;
 		}
 
@@ -447,35 +449,33 @@ void render(struct mako_surface *surface, struct pool_buffer *buffer, int scale,
 
 		struct mako_style *style = &hidden_notif->style;
 
-		if (!style->invisible) {
-			if (style->margin.top > pending_bottom_margin) {
-				total_height += style->margin.top;
-			} else {
-				total_height += pending_bottom_margin;
-			}
-
-			struct mako_hidden_format_data data = {
-				.hidden = hidden_count,
-				.count = total_notifications,
-			};
-
-			size_t text_ln =
-				format_text(style->format, NULL, format_hidden_text, &data);
-			char *text = malloc(text_ln + 1);
-			if (text == NULL) {
-				fprintf(stderr, "allocation failed");
-				return;
-			}
-
-			format_text(style->format, text, format_hidden_text, &data);
-
-			int hidden_height = render_notification(
-				cairo, state, surface, style, text, NULL, total_height, scale, NULL, 0);
-			free(text);
-
-			total_height += hidden_height;
-			pending_bottom_margin = style->margin.bottom;
+		if (style->margin.top > pending_bottom_margin) {
+			total_height += style->margin.top;
+		} else {
+			total_height += pending_bottom_margin;
 		}
+
+		struct mako_hidden_format_data data = {
+			.hidden = hidden_count,
+			.count = total_notifications,
+		};
+
+		size_t text_ln =
+			format_text(style->format, NULL, format_hidden_text, &data);
+		char *text = malloc(text_ln + 1);
+		if (text == NULL) {
+			fprintf(stderr, "allocation failed");
+			return;
+		}
+
+		format_text(style->format, text, format_hidden_text, &data);
+
+		int hidden_height = render_notification(
+			cairo, state, surface, style, text, NULL, total_height, scale, NULL, 0);
+		free(text);
+
+		total_height += hidden_height;
+		pending_bottom_margin = style->margin.bottom;
 		destroy_notification(hidden_notif);
 	}
 

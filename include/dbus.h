@@ -15,6 +15,8 @@ struct mako_notification;
 struct mako_action;
 enum mako_notification_close_reason;
 
+int request_service_name(struct mako_state *state);
+int release_service_name(struct mako_state *state);
 bool init_dbus(struct mako_state *state);
 void finish_dbus(struct mako_state *state);
 void notify_notification_closed(struct mako_notification *notif,
@@ -24,8 +26,6 @@ void notify_action_invoked(struct mako_action *action,
 	const char *activation_token);
 
 int init_dbus_xdg(struct mako_state *state);
-
-void emit_modes_changed(struct mako_state *state);
 
 void emit_notifications_changed(struct mako_state *state);
 

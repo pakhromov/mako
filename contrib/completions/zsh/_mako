@@ -7,27 +7,38 @@
 
 _arguments \
     '-h[Show help message and quit.]' '--help[Show help message and quit.]' \
+    '-c[Path to config file.]:config file:_files' '--config[Path to config file.]:config file:_files' \
     '--font[Font family and size.]:font:' \
     '--background-color[Background color.]:color:' \
     '--text-color[Text color.]:color:' \
     '--width[Notification width.]:width:' \
     '--height[Max notification height.]:height:' \
+    '--outer-margin[Outer margin values, comma separated. Up to four values, with the same meaning as in CSS.]:outer margin:' \
     '--margin[Margin values, comma separated. Up to four values, with the same meaning as in CSS.]:margin:' \
     '--padding[Padding values, comma separated. Up to four values, with the same meaning as in CSS.]:padding:' \
     '--border-size[Border size.]:size:' \
     '--border-color[Border color.]:color:' \
     '--border-radius[Corner radius values, comma separated. Up to four values, with the same meaning as in CSS.]:radius:' \
+    '--progress-color[Progress indicator color.]:color:' \
+    '--icons[Show icons in notifications.]:icons enabled:(0 1)' \
+    '--icon-location[Position of the icon relative to the displayed text.]:position:(left right top bottom)' \
+    '--icon-path[Icon search path, colon delimited.]:path:' \
+    '--max-icon-size[Set max size of icons.]:size:' \
     '--icon-border-radius[Icon corner radius value.]:radius:' \
     '--markup[Enable/disable markup.]:markup enabled:(0 1)' \
     '--actions[Applications may request an action to be associated with activating a notification. Disabling this will cause mako to ignore these requests.]:action enabled:(0 1)' \
     '--format[Format string.]:format:' \
-    '--hidden-format[Format string.]:format:' \
     '--max-visible[Max number of visible notifications.]:visible notifications:' \
-    '--max-history[Max size of history buffer.]:historical notifications:' \
-    '--history[Add expired notification to history.]:history:' \
     '--default-timeout[Default timeout in milliseconds.]:timeout (ms):' \
     '--ignore-timeout[If set, mako will ignore the expire timeout sent by notifications and use the one provided by default-timeout instead.]:Use default timeout:(0 1)' \
+    '--ignore-replace[If set, mako will ignore requests from applications to replace an existing notification.]:Ignore replace:(0 1)' \
+    '--ignore-close[If set, mako will ignore requests from applications to close a notification.]:Ignore close:(0 1)' \
     '--output[Show notifications on this output.]:name:' \
     '--layer[Arrange notifications at this layer.]:layer:(background bottom top overlay)' \
     '--anchor[Position on output to put notifications.]:position:(top-right bottom-right bottom-center bottom-left top-left top-center center-right center-left center)' \
-    '--sort[Sort incoming notifications by time and/or priority in ascending(+) or descending(-) order.]:sort pattern:'
+    '--sort[Sort incoming notifications by time and/or priority in ascending(+) or descending(-) order.]:sort pattern:' \
+    '--group-by[Group notifications sharing these criteria fields.]:fields:' \
+    '--on-button-left[Performs the action when the left pointer button is pressed.]:action:(none dismiss dismiss-all dismiss-group invoke-default-action invoke-action exec)' \
+    '--on-button-middle[Performs the action when the middle pointer button is pressed.]:action:(none dismiss dismiss-all dismiss-group invoke-default-action invoke-action exec)' \
+    '--on-button-right[Performs the action when the right pointer button is pressed.]:action:(none dismiss dismiss-all dismiss-group invoke-default-action invoke-action exec)' \
+    '--on-touch[Performs the action when tapped via a touch device.]:action:(none dismiss dismiss-all dismiss-group invoke-default-action invoke-action exec)'

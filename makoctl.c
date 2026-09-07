@@ -44,14 +44,35 @@ static int new_method_call(sd_bus *bus, sd_bus_message **m, const char *member) 
 		"fr.emersion.Mako", member);
 	if (ret < 0) {
 		log_neg_errno(ret, "sd_bus_message_new_method_call() failed for %s", member);
+		return ret;
+	}
+
+	// mako only lives as long as it has something on screen. Controlling it is
+	// only meaningful while it's up, so never let the bus start one for us.
+	ret = sd_bus_message_set_auto_start(*m, false);
+	if (ret < 0) {
+		log_neg_errno(ret, "sd_bus_message_set_auto_start() failed for %s", member);
 	}
 	return ret;
+}
+
+// True if the failure just means that mako isn't currently running.
+static bool is_not_running(int ret, const sd_bus_error *error) {
+	return sd_bus_error_has_name(error, SD_BUS_ERROR_SERVICE_UNKNOWN) ||
+		sd_bus_error_has_name(error, SD_BUS_ERROR_NAME_HAS_NO_OWNER) ||
+		ret == -EHOSTUNREACH || ret == -ENXIO;
 }
 
 static int call(sd_bus *bus, sd_bus_message *m, sd_bus_message **reply) {
 	sd_bus_error error = {0};
 	int ret = sd_bus_call(bus, m, 0, &error, reply);
 	if (ret < 0) {
+		if (is_not_running(ret, &error)) {
+			// There is no notification on screen, so there is nothing to do
+			// and nothing to complain about.
+			sd_bus_error_free(&error);
+			exit(EXIT_SUCCESS);
+		}
 		fprintf(stderr, "%s (%s)\n", error.message, error.name);
 		sd_bus_error_free(&error);
 	}
@@ -84,15 +105,13 @@ static int run_dismiss(sd_bus *bus, int argc, char *argv[]) {
 	uint32_t id = 0;
 	bool group = false;
 	bool all = false;
-	bool no_history = false;
 	while (true) {
 		const struct option options[] = {
 			{ "all", no_argument, 0, 'a' },
 			{ "group", no_argument, 0, 'g' },
-			{ "no-history", no_argument, 0, 'h' },
 			{0},
 		};
-		int opt = getopt_long(argc, argv, "aghn:", options, NULL);
+		int opt = getopt_long(argc, argv, "agn:", options, NULL);
 		if (opt == -1) {
 			break;
 		}
@@ -111,9 +130,6 @@ static int run_dismiss(sd_bus *bus, int argc, char *argv[]) {
 				return 1;
 			}
 			break;
-		case 'h':;
-			no_history = true;
-			break;
 		default:
 			return -EINVAL;
 		}
@@ -126,8 +142,6 @@ static int run_dismiss(sd_bus *bus, int argc, char *argv[]) {
 		fprintf(stderr, "-n cannot be used with -a or -g\n");
 		return -EINVAL;
 	}
-
-	char types[6] = "a{sv}";
 
 	sd_bus_message *msg = NULL;
 	int ret = new_method_call(bus, &msg, "DismissNotifications");
@@ -150,12 +164,6 @@ static int run_dismiss(sd_bus *bus, int argc, char *argv[]) {
 		return ret;
 	}
 
-	int history = !no_history;
-	ret = sd_bus_message_append(msg, "{sv}", "history", "b", (int)history);
-	if (ret < 0) {
-		return ret;
-	}
-
 	ret = sd_bus_message_append(msg, "{sv}", "all", "b", (int)all);
 	if (ret < 0) {
 		return ret;
@@ -169,8 +177,6 @@ static int run_dismiss(sd_bus *bus, int argc, char *argv[]) {
 	ret = call(bus, msg, NULL);
 	sd_bus_message_unref(msg);
 	return ret;
-
-	return call_method(bus, "DismissNotifications", NULL, types, &msg);
 }
 
 static int run_invoke(sd_bus *bus, int argc, char *argv[]) {
@@ -526,18 +532,6 @@ static int print_notification_list(sd_bus_message *reply, int argc, char *argv[]
 	return sd_bus_message_exit_container(reply);
 }
 
-static int run_history(sd_bus *bus, int argc, char *argv[]) {
-	sd_bus_message *reply = NULL;
-	int ret = call_method(bus, "ListHistory", &reply, "");
-	if (ret < 0) {
-		return ret;
-	}
-
-	ret = print_notification_list(reply, argc, argv);
-	sd_bus_message_unref(reply);
-	return ret;
-}
-
 static int run_list(sd_bus *bus, int argc, char *argv[]) {
 	sd_bus_message *reply = NULL;
 	int ret = call_method(bus, "ListNotifications", &reply, "");
@@ -783,133 +777,6 @@ static int run_menu(sd_bus *bus, int argc, char *argv[]) {
 	return ret;
 }
 
-static int find_mode(char **modes, int modes_len, const char *mode) {
-	for (int i = 0; i < modes_len; i++) {
-		if (strcmp(modes[i], mode) == 0) {
-			return i;
-		}
-	}
-	return -1;
-}
-
-static char **add_mode(char **modes, int *modes_len, const char *mode) {
-	modes = realloc(modes, (*modes_len + 2) * sizeof(modes[0]));
-	modes[*modes_len] = strdup(mode);
-	modes[*modes_len + 1] = NULL;
-	(*modes_len)++;
-	return modes;
-}
-
-static void remove_mode(char **modes, int *modes_len, int i) {
-	free(modes[i]);
-	modes[i] = modes[*modes_len - 1];
-	modes[*modes_len - 1] = NULL;
-	(*modes_len)--;
-}
-
-static int run_mode(sd_bus *bus, int argc, char *argv[]) {
-	sd_bus_message *reply = NULL;
-	int ret = call_method(bus, "ListModes", &reply, "");
-	if (ret < 0) {
-		return ret;
-	}
-
-	char **modes = NULL;
-	ret = sd_bus_message_read_strv(reply, &modes);
-	if (ret < 0) {
-		log_neg_errno(ret, "sd_bus_message_read_strv() failed");
-		return ret;
-	}
-
-	int modes_len = 0;
-	while (modes != NULL && modes[modes_len] != NULL) {
-		modes_len++;
-	}
-
-	bool add_remove_toggle_flag = false, set_flag = false;
-	while (true) {
-		int opt = getopt(argc, argv, "a:r:t:s");
-		if (opt == -1) {
-			break;
-		}
-
-		int i;
-		switch (opt) {
-		case 'a':
-			add_remove_toggle_flag = true;
-			modes = add_mode(modes, &modes_len, optarg);
-			break;
-		case 'r':
-			add_remove_toggle_flag = true;
-			i = find_mode(modes, modes_len, optarg);
-			if (i >= 0) {
-				remove_mode(modes, &modes_len, i);
-			}
-			break;
-		case 't':
-			add_remove_toggle_flag = true;
-			i = find_mode(modes, modes_len, optarg);
-			if (i >= 0) {
-				remove_mode(modes, &modes_len, i);
-			} else {
-				modes = add_mode(modes, &modes_len, optarg);
-			}
-			break;
-		case 's':
-			set_flag = true;
-			break;
-		default:
-			return -EINVAL;
-		}
-	}
-	if (add_remove_toggle_flag && set_flag) {
-		fprintf(stderr, "-a/-r/-t and -s cannot be used together\n");
-		return -EINVAL;
-	}
-	if (set_flag) {
-		for (int i = 0; i < modes_len; i++) {
-			free(modes[i]);
-		}
-		modes_len = argc - optind;
-		modes = realloc(modes, (modes_len + 1) * sizeof(modes[0]));
-		for (int i = 0; i < modes_len; i++) {
-			modes[i] = strdup(argv[optind + i]);
-		}
-		modes[modes_len] = NULL;
-	} else if (optind < argc) {
-		fprintf(stderr, "positional arguments can only be used with -s\n");
-		return -EINVAL;
-	}
-
-	if (add_remove_toggle_flag || set_flag) {
-		sd_bus_message *m = NULL;
-		ret = new_method_call(bus, &m, "SetModes");
-		if (ret < 0) {
-			return ret;
-		}
-
-		ret = sd_bus_message_append_strv(m, modes);
-		if (ret < 0) {
-			log_neg_errno(ret, "sd_bus_message_append_strv() failed");
-			return ret;
-		}
-
-		ret = call(bus, m, NULL);
-		sd_bus_message_unref(m);
-		if (ret < 0) {
-			return ret;
-		}
-	}
-
-	for (int i = 0; i < modes_len; i++) {
-		printf("%s\n", modes[i]);
-		free(modes[i]);
-	}
-	free(modes);
-	sd_bus_message_unref(reply);
-	return 0;
-}
-
 static const char usage[] =
 	"Usage: makoctl <command> [options...]\n"
 	"\n"
@@ -920,9 +787,6 @@ static const char usage[] =
 	"          [-a|--all]             Dismiss all notifications\n"
 	"          [-g|--group]           Dismiss all the notifications\n"
 	"                                 in the last notification's group\n"
-	"          [-h|--no-history]      Dismiss w/o adding to history\n"
-	"  restore                        Restore the most recently expired\n"
-	"                                 notification from the history buffer\n"
 	"  invoke [-n id] [action]        Invoke an action on the notification\n"
 	"                                 with the given id, or the last\n"
 	"                                 notification if none is given\n"
@@ -931,12 +795,6 @@ static const char usage[] =
 	"                                 with the given id, or the last\n"
 	"                                 notification if none is given\n"
 	"  list [-j]                      List notifications\n"
-	"  history [-j]                   List history\n"
-	"  reload                         Reload the configuration file\n"
-	"  mode                           List modes\n"
-	"  mode [-a mode]... [-r mode]... Add/remove modes\n"
-	"  mode [-t mode]...              Toggle modes (add if not present, remove if present)\n"
-	"  mode -s mode...                Set modes\n"
 	"  help                           Show this help\n";
 
 int main(int argc, char *argv[]) {
@@ -965,18 +823,10 @@ int main(int argc, char *argv[]) {
 		ret = run_dismiss(bus, cmd_argc, cmd_argv);
 	} else if (strcmp(cmd, "invoke") == 0) {
 		ret = run_invoke(bus, cmd_argc, cmd_argv);
-	} else if (strcmp(cmd, "history") == 0) {
-		ret = run_history(bus, cmd_argc, cmd_argv);
 	} else if (strcmp(cmd, "list") == 0) {
 		ret = run_list(bus, cmd_argc, cmd_argv);
 	} else if (strcmp(cmd, "menu") == 0) {
 		ret = run_menu(bus, cmd_argc, cmd_argv);
-	} else if (strcmp(cmd, "mode") == 0) {
-		ret = run_mode(bus, cmd_argc, cmd_argv);
-	} else if (strcmp(cmd, "reload") == 0) {
-		ret = call_method(bus, "Reload", NULL, "");
-	} else if (strcmp(cmd, "restore") == 0) {
-		ret = call_method(bus, "RestoreNotification", NULL, "");
 	} else {
 		fprintf(stderr, "Unknown command: %s\n", cmd);
 		return 1;
